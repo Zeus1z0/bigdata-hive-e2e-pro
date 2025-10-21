@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Hadoop + Hive 端到端分析（Tips 数据集）</title>
+  <link rel="stylesheet" href="assets/style.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+</head>
+<body>
+  <div class="wrap">
+    <h1>端到端大数据分析（Hadoop 2.10.2 + Hive 2.3.9）</h1>
+    <p class="muted">数据：餐厅小费（tips.csv）。流程：HDFS → Hive（CSV→ORC 分层/分区）→ 数据质量 → 可视化。页面生成时间：<span id="genAt"></span></p>
+
+    <div class="kpis">
+      <div class="kpi">
+        <div class="muted">样本量（rows）</div>
+        <div id="kpiRows" style="font-size:24px;font-weight:700">-</div>
+      </div>
+      <div class="kpi">
+        <div class="muted">整体平均小费率（%）</div>
+        <div id="kpiAvg" style="font-size:24px;font-weight:700">-</div>
+      </div>
+      <div class="kpi">
+        <div class="muted">CSV 下载</div>
+        <div><a href="assets/by_day.csv" target="_blank">by_day.csv</a> · <a href="assets/by_size.csv" target="_blank">by_size.csv</a> · <a href="assets/heatmap.csv" target="_blank">heatmap.csv</a></div>
+      </div>
+    </div>
+
+    <div class="grid" style="margin-top:16px">
+      <div class="card"><h2>不同工作日平均小费率</h2><div id="chartDay" style="height:360px"></div></div>
+      <div class="card"><h2>不同就餐人数平均小费率</h2><div id="chartSize" style="height:360px"></div></div>
+      <div class="card" style="grid-column:1/-1"><h2>工作日 × 就餐时段 热力图</h2><div id="chartHeat" style="height:420px"></div></div>
+      <div class="card" style="grid-column:1/-1">
+        <h2>方法与结论</h2>
+        <ul>
+          <li>CSV 外部表仅作落地；生产表转换为 ORC（SNAPPY）并按 <code>day</code> 分区，添加衍生字段 <code>tip_pct</code>（百分比）、<code>is_weekend</code>。</li>
+          <li>质量检查覆盖负数/越界/关键空值；若存在违规会在流水线中告警并可选择中止。</li>
+          <li>从结果导出本地 CSV，使用 ECharts 生成交互图。</li>
+          <li>从图可见：不同工作日/人数的小费率存在显著差异；晚餐时段（Dinner）通常更高（结合图表解读）。</li>
+        </ul>
+      </div>
+    </div>
+
+    <footer>© 2025 Hadoop + Hive E2E Demo · 静态页面由脚本自动生成</footer>
+  </div>
+
+  <script>
+    const data = __DATA_JSON__;
+    document.getElementById("genAt").innerText = data.generatedAt;
+    document.getElementById("kpiRows").innerText = data.summary.rows || '-';
+    document.getElementById("kpiAvg").innerText = (data.summary.avg_tip_pct ?? '-');
+
+    // Chart 1: by day
+    const c1 = echarts.init(document.getElementById('chartDay'));
+    const dayNames = data.byDay.map(d=>d.day);
+    const dayVals  = data.byDay.map(d=>d.avg_tip_pct);
+    c1.setOption({
+      tooltip:{},
+      xAxis:{type:'category',data:dayNames,axisLabel:{color:'#e9eefb'}},
+      yAxis:{type:'value',axisLabel:{color:'#e9eefb'}},
+      series:[{type:'bar',data:dayVals, itemStyle:{color:'#4F81BD'}}],
+      grid:{left:40,right:20,top:20,bottom:40},
+      backgroundColor:'transparent'
+    });
+
+    // Chart 2: by size
+    const c2 = echarts.init(document.getElementById('chartSize'));
+    const sizeNames = data.bySize.map(d=>String(d.size));
+    const sizeVals  = data.bySize.map(d=>d.avg_tip_pct);
+    c2.setOption({
+      tooltip:{},
+      xAxis:{type:'category',data:sizeNames,axisLabel:{color:'#e9eefb'}},
+      yAxis:{type:'value',axisLabel:{color:'#e9eefb'}},
+      series:[{type:'bar',data:sizeVals, itemStyle:{color:'#9CCC65'}}],
+      grid:{left:40,right:20,top:20,bottom:40},
+      backgroundColor:'transparent'
+    });
+
+    // Chart 3: heatmap day x time
+    const c3 = echarts.init(document.getElementById('chartHeat'));
+    const hmX = data.heatmap.x, hmY = data.heatmap.y, hmVals = data.heatmap.values;
+    c3.setOption({
+      tooltip:{position:'top'},
+      xAxis:{type:'category',data:hmX,axisLabel:{color:'#e9eefb'}},
+      yAxis:{type:'category',data:hmY,axisLabel:{color:'#e9eefb'}},
+      visualMap:{min:0,max:40, calculable:true, orient:'horizontal', left:'center', bottom:0},
+      series:[{type:'heatmap', data:hmVals, label:{show:true}, emphasis:{itemStyle:{shadowBlur:10,shadowColor:'rgba(0,0,0,0.5)'}}}],
+      grid:{left:60,right:40,top:20,bottom:60},
+      backgroundColor:'transparent'
+    });
+    window.addEventListener('resize', ()=>{c1.resize(); c2.resize(); c3.resize();});
+  </script>
+</body>
+</html>
