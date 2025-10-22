@@ -6,11 +6,12 @@ def read_dir_csv(dir_path, headers=None):
     rows = []
     if not os.path.isdir(dir_path): return rows
     for fn in os.listdir(dir_path):
-        if fn.startswith("_"): continue
+        if fn.startswith("_") or fn.startswith("."):  continue
         fp = os.path.join(dir_path, fn)
         if os.path.isdir(fp): continue
-        with open(fp, "r", encoding="utf-8") as f:
-            reader = csv.reader(f)
+        with open(fp, "r", encoding="latin1") as f:
+            clean_f = (line.replace('\0', '') for line in f)
+            reader = csv.reader(clean_f)
             for r in reader:
                 if not r: continue
                 rows.append(r)
@@ -20,7 +21,9 @@ def load_by_day(path):
     # day, avg_tip_pct, stddev_tip_pct, n
     rows = read_dir_csv(path)
     # 维持 Hive 排序（已按 avg_tip_pct DESC）
-    data = [{"day": r[0], "avg_tip_pct": float(r[1]), "stddev_tip_pct": float(r[2]), "n": int(r[3])} for r in rows]
+    data = [{"day": r[0], "avg_tip_pct": float(r[1]), "stddev_tip_pct": float(r[2]), "n": int(r[3])} for r in rows if len(r) >= 4]
+    # 按 avg_tip_pct 字段进行降序排序
+    data.sort(key=lambda item: item['avg_tip_pct'], reverse=True)
     return data
 
 def load_by_size(path):
@@ -43,7 +46,11 @@ def load_heatmap(path):
     data = []
     for yi, t in enumerate(time_order):
         for xi, d in enumerate(day_order):
-            data.append([xi, yi, grid[(d,t)]["avg"]])
+            # 获取这格的数据
+            cell_data = grid[(d,t)]
+            # 如果订单数 n > 0，则使用真实的平均值，否则为 None
+            value = cell_data["avg"] if cell_data["n"] > 0 else None
+            data.append([xi, yi, value])
     return {"x": day_order, "y": time_order, "values": data}
 
 def load_summary(path):
@@ -114,10 +121,10 @@ def main():
         target = os.path.join(args.assets_dir, name)
         with open(target, "w", encoding="utf-8") as out:
             for fn in os.listdir(srcdir):
-                if fn.startswith("_"): continue
+                if fn.startswith("_") or fn.startswith("."): continue
                 fp = os.path.join(srcdir, fn)
                 if os.path.isdir(fp): continue
-                with open(fp, "r", encoding="utf-8") as f:
+                with open(fp, "r", encoding="latin1") as f:
                     out.write(f.read())
     print(f"Wrote {args.out}")
 

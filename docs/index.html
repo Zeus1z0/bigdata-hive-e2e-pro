@@ -68,7 +68,7 @@
   </div>
 
   <script>
-    const data = __DATA_JSON__;
+    const data = {"byDay": [{"day": "Fri", "avg_tip_pct": 16.99, "stddev_tip_pct": 4.64, "n": 19}, {"day": "Sun", "avg_tip_pct": 16.69, "stddev_tip_pct": 8.42, "n": 76}, {"day": "Thur", "avg_tip_pct": 16.13, "stddev_tip_pct": 3.83, "n": 62}, {"day": "Sat", "avg_tip_pct": 15.32, "stddev_tip_pct": 5.1, "n": 87}], "bySize": [{"size": 1, "avg_tip_pct": 21.73, "n": 4}, {"size": 2, "avg_tip_pct": 16.57, "n": 156}, {"size": 3, "avg_tip_pct": 15.22, "n": 38}, {"size": 4, "avg_tip_pct": 14.59, "n": 37}, {"size": 5, "avg_tip_pct": 14.15, "n": 5}, {"size": 6, "avg_tip_pct": 15.62, "n": 4}], "heatmap": {"x": ["Thur", "Fri", "Sat", "Sun"], "y": ["Lunch", "Dinner"], "values": [[0, 0, 16.13], [1, 0, 18.88], [2, 0, null], [3, 0, null], [0, 1, 15.97], [1, 1, 15.89], [2, 1, 15.32], [3, 1, 16.69]]}, "summary": {"rows": 244, "avg_tip_pct": 16.08}, "generatedAt": "2025-10-22 09:37:00"};
     document.getElementById("genAt").innerText = data.generatedAt;
     document.getElementById("kpiRows").innerText = data.summary.rows || '-';
     document.getElementById("kpiAvg").innerText = (data.summary.avg_tip_pct ?? '-');
